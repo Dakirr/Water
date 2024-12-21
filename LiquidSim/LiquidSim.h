@@ -1,7 +1,6 @@
 #ifndef LIQUIDSIM_H
 #define LIQUIDSIM_H
 #include "../Fixed/Fixed.h"
-#include "../VectorField/VectorField.h"
 #include <random>
 #include <algorithm>
 #include <ranges>
@@ -388,7 +387,7 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
             for (size_t x = 0; x < N; ++x) {
                 cout << field[x] << "\n";
                 
-                if (i % 30 == 0) {
+                if (i % 100 == 0) {
                     this->save("Test_" + to_string(i));
                 }
             }

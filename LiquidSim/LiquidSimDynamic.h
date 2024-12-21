@@ -1,7 +1,6 @@
 #ifndef LIQUIDSIMDYNAMIC_H
 #define LIQUIDSIMDYNAMIC_H
 #include "../Fixed/Fixed.h"
-#include "../VectorField/VectorField.h"
 #include <random>
 #include <algorithm>
 #include <ranges>
@@ -380,7 +379,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
                 }
                 cout << "\n";
             }
-            if (i % 30 == 0) {
+            if (i % 100 == 0) {
                 this->save("Test_" + to_string(i));
             }
         }
