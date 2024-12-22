@@ -29,24 +29,19 @@ int main(int argc, char** argv) {
         std::string arg = argv[i];
         if (arg.rfind("--p-type=", 0) == 0) {
             p_type_name = arg.substr(9);
-            cerr << p_type_name << "\n";
+            //cerr << p_type_name << "\n";
         } else if (arg.rfind("--v-type=", 0) == 0) {
             v_type_name = arg.substr(9);
-            cerr << v_type_name << "\n";
+            //cerr << v_type_name << "\n";
         } else if (arg.rfind("--v-flow-type=", 0) == 0) {
             vf_type_name = arg.substr(14);
-            cerr << vf_type_name << "\n";
+            //cerr << vf_type_name << "\n";
         }
     }
     if (p_type_name.empty() || v_type_name.empty() || vf_type_name.empty()){
         std::cerr << "Error: --p-type, --v-type, and --vf-type flags are required.\n";
         return 1;
     }
-    
-    // std::cout << "P type: " << p_type_name << std::endl;
-    // std::cout << "V type: " << v_type_name << std::endl;
-    // std::cout << "VF type: " << vf_type_name << std::endl;
-    //exit(0);
     
     // Вариант 1. Про сами симуляторы и сохранение (они работают нормально, вроде.)
     using P = Fixed<32, 8>;
@@ -61,9 +56,10 @@ int main(int argc, char** argv) {
 
 
     // Вариант 2. Создание из флагов (работает, кажется, но немного странно. Я не знаю, это моя проблема, или прикол физики.)
-    // Оно компилируется и что-то выводит, во всяком случае.
+    // Оно компилируется и выводит поле во всяком случае.
     // Код непосредственно обработки флагов написан не мной, но туда впаян мой симулятор, и я, кажется, понимаю, что происходит.
     // Подробнее можно увидеть в LST::start_simulation() [./Parcer/simulator.hpp:102:0]
+    // Оно может в обработку размеров
     const LST sim = LST::from_params(types::SimulationParams{
         .p_type_name      = p_type_name,
         .v_type_name      = v_type_name,
@@ -73,10 +69,10 @@ int main(int argc, char** argv) {
     sim.start_on_field(types::Context{
         .field =
             std::vector<std::vector<char>>{
-                {'#', '#', '#', '#', '#'},
-                {'#', '#', '.', '.', '#'},
-                {'#', ' ', ' ', ' ', '#'},
-                {'#', '#', '#', '#', '#'},
+                {'#', '#', '#', '#', '#', '#',},
+                {'#', '#', '.', '.', ' ', '#',},
+                {'#', ' ', ' ', ' ', '.', '#',},
+                {'#', '#', '#', '#', '#', '#',},
             },
     });
 

@@ -65,6 +65,8 @@ class LiquidSim {
 
         if (rho_in == nullptr) {
             P rho_z [256] = {0};
+            rho_z ['.'] = 1000;
+            rho_z [' '] = 0.01;
             rho_in = rho_z;
             //cerr << "filled the rho with 0 ";
         }
@@ -299,7 +301,7 @@ int do_on_a_chunk(LiquidSim<N, M, T, P, V, VF>* LS, size_t N_min, size_t N_max, 
 
 template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
 void LiquidSim<N, M, T, P, V, VF>::simulate () {
-    cerr << "Created\n";
+    //cerr << "Created\n";
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
             if (field[x][y] == '#')
@@ -404,11 +406,13 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
         if (prop || 1) {
             cout << "Tick " << i << ":\n";
             for (size_t x = 0; x < N; ++x) {
-                cout << field[x] << "\n";
-                
-                if (i % 100 == 0) {
-                    this->save(this->name + "_Tick_№" + to_string(i));
+                for (size_t y = 0; y < M; ++y) {
+                    cout << field[x][y] << "";
                 }
+                cout << "\n";
+            }
+            if (i % 100 == 0) {
+                    this->save(this->name + "_Tick_№" + to_string(i));
             }
         }
         //exit(0);

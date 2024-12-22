@@ -275,7 +275,7 @@ bool LiquidSimDynamic<T, P, V, VF>::propagate_move(int x, int y, bool is_first) 
 
 template <size_t T, typename P, typename V, typename VF>
 void LiquidSimDynamic<T, P, V, VF>::simulate () {
-    cerr << "Created\n" << N << " " << M << " " << field.size() << " " << field.back().size() << " " << dirs.size() << " " << dirs.back().size() << "\n";
+    //cerr << "Created\n" << N << " " << M << " " << field.size() << " " << field.back().size() << " " << dirs.size() << " " << dirs.back().size() << "\n";
     for (size_t x = 0; x < N; x++) {
         for (size_t y = 0; y < M; y++) {
             if (field[x][y] == '#')
@@ -492,7 +492,7 @@ void LiquidSimDynamic<T, P, V, VF>::save(std::string name) {
     }
     file << "\n";
     
-    cerr << N << " " << M << " " << field.size() << " " << field.back().size() << "\n"; 
+    //cerr << N << " " << M << " " << field.size() << " " << field.back().size() << "\n"; 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
             file << (int) field[x][y] << " ";
