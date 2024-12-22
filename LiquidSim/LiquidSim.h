@@ -1,6 +1,8 @@
+#pragma optimize("Ofast")
 #ifndef LIQUIDSIM_H
 #define LIQUIDSIM_H
 #include "../Fixed/Fixed.h"
+#include "ThreadPool.h"
 #include <random>
 #include <algorithm>
 #include <ranges>
@@ -11,10 +13,15 @@
 #include <execution>
 // constexpr size_t N = 14, M = 5;
 
+size_t max_threads = std::thread::hardware_concurrency();
 
 template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
 class LiquidSim {
     public:
+    string name = "Simulator_№" + to_string(((unsigned int) (rnd() * 100000)));
+    ThreadPool<int> TP {max_threads};
+    ThreadPool<tuple<V, bool, pair<int, int>>> TPVF {max_threads};
+    ThreadPool<bool> TPB {max_threads};
     // static constexpr size_t N = 36, M = 84;
     // static constexpr size_t T = 1'000'000;
     template <typename A>
@@ -33,7 +40,6 @@ class LiquidSim {
         void print() {
         }
     };
-    void start();
 
     P rho[256];
     P g;
@@ -49,9 +55,6 @@ class LiquidSim {
     int dirs[N][M]{};
 
     LiquidSim (std::vector<vector<char>> field_in = {}, P g_in = 0.1, P* rho_in = nullptr) {
-        cerr << "Entered LiquidSim()\n";
-        cerr << "copying rho: ";
-
         if (field_in != vector<vector<char>>{}) {
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < M; j++) {
@@ -67,18 +70,16 @@ class LiquidSim {
         }
         for (int i = 0; i < 256; i++) {
             rho[i] = rho_in[i];
-            cerr << i << " ";
         }
     
-        cerr << "\n";
         //std::copy(rho_in, rho_in + 256, this->rho);
-        cerr << "Rho copied\n";
         this->g = g_in;
     };
 
 
     tuple<V, bool, pair<int, int>> propagate_flow(int x, int y, V lim);
     void propagate_stop(int x, int y, bool force = false);
+    void propagate_stop_old(int x, int y, bool force = false);
     V move_prob(int x, int y);
 
     array<V, deltas.size()> v;
@@ -90,7 +91,7 @@ class LiquidSim {
 
     void save(string name);
     
-    char field[N][M + 1] = {
+    char field[N][M + 1];/* = {
     "####################################################################################",
     "#                                                                                  #",
     "#                                                                                  #",
@@ -127,7 +128,7 @@ class LiquidSim {
     "#                                                                                  #",
     "#                                                                                  #",
     "####################################################################################",
-    };
+    };*/
 
 };
 
@@ -168,6 +169,12 @@ tuple<V, bool, pair<int, int>> LiquidSim<N, M, T, P, V, VF>::propagate_flow(int 
 }
 
 template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
+int propagate_stop_outer (LiquidSim<N, M, T, P, V, VF>* LS, int x, int y) {
+    LS->propagate_stop(x, y);
+    return 0;  
+}
+
+template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
 void LiquidSim<N, M, T, P, V, VF>::propagate_stop(int x, int y, bool force) {
     if (!force) {
         bool stop = true;
@@ -183,6 +190,7 @@ void LiquidSim<N, M, T, P, V, VF>::propagate_stop(int x, int y, bool force) {
         }
     }
     last_use[x][y] = UT;
+    std::vector<std::future<int>> futures;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
         if (field[nx][ny] == '#' || last_use[nx][ny] == UT || velocity.get(x, y, dx, dy) > 0) {
@@ -252,7 +260,7 @@ bool LiquidSim<N, M, T, P, V, VF>::propagate_move(int x, int y, bool is_first) {
         auto [dx, dy] = deltas[d];
         nx = x + dx;
         ny = y + dy;
-        assert(velocity.get(x, y, dx, dy) > 0 && field[nx][ny] != '#' && last_use[nx][ny] < UT);
+        //assert(velocity.get(x, y, dx, dy) > 0 && field[nx][ny] != '#' && last_use[nx][ny] < UT);
 
         ret = (last_use[nx][ny] == UT - 1 || propagate_move(nx, ny, false));
     } while (!ret);
@@ -274,6 +282,20 @@ bool LiquidSim<N, M, T, P, V, VF>::propagate_move(int x, int y, bool is_first) {
     return ret;
 }
 
+template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
+int do_on_a_chunk(LiquidSim<N, M, T, P, V, VF>* LS, size_t N_min, size_t N_max, size_t M_min, size_t M_max, bool& prop) {
+    for (size_t x = N_min; x < N_max; ++x) {
+        for (size_t y = M_min; y < M_max; ++y) {
+            if (LS->field[x][y] != '#' && LS->last_use[x][y] != LS->UT) {
+                if (random01<P>() < LS->move_prob(x, y)) {
+                    prop = true;
+                }
+                LS->propagate_move(x, y, true);
+            }
+        }
+    }
+    return 0;
+}
 
 template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
 void LiquidSim<N, M, T, P, V, VF>::simulate () {
@@ -302,10 +324,9 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
         // Apply forces from p
         memcpy(this->old_p, this->p, sizeof(this->p));
         for (size_t x = 0; x < N; ++x) {
-            std::for_each(std::execution::par_unseq, std::begin(this->p[x]), std::end(this->p[x]), [&](auto& py){
-                size_t y = &py - &this->p[x][0];
+            for (size_t y = 0; y < M; ++y) {
                 if (field[x][y] == '#')
-                    return;
+                    continue;
                 for (auto [dx, dy] : deltas) {
                     int nx = x + dx, ny = y + dy;
                     if (field[nx][ny] != '#' && this->old_p[nx][ny] < this->old_p[x][y]) {
@@ -323,7 +344,7 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
                         total_delta_p -= force / this->dirs[x][y];
                     }
                 }
-            });
+            }
         }
         // Make flow from velocities
         this->velocity_flow = {};
@@ -344,10 +365,9 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
         } while (prop);
         // Recalculate p with kinetic energy
         for (size_t x = 0; x < N; ++x) {
-            std::for_each(std::execution::par_unseq, std::begin(this->p[x]), std::end(this->p[x]), [&](auto& py){
-                size_t y = &py - &this->p[x][0];
+            for (size_t y = 0; y < M; ++y) {
                 if (field[x][y] == '#')
-                    return;
+                    continue;
                 for (auto [dx, dy] : deltas) {
                     auto old_v = this->velocity.get(x, y, dx, dy);
                     auto new_v = this->velocity_flow.get(x, y, dx, dy);
@@ -366,7 +386,7 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
                         }
                     }
                 }
-            });
+            };
         }
         this->UT += 2;
         prop = false;
@@ -375,20 +395,19 @@ void LiquidSim<N, M, T, P, V, VF>::simulate () {
                 if (field[x][y] != '#' && this->last_use[x][y] != this->UT) {
                     if (random01<P>() < this->move_prob(x, y)) {
                         prop = true;
-                        this->propagate_move(x, y, true);
-                    } else {
-                        this->propagate_stop(x, y, true);
                     }
+                    this->propagate_move(x, y, true);
                 }
             }
         }
+
         if (prop || 1) {
             cout << "Tick " << i << ":\n";
             for (size_t x = 0; x < N; ++x) {
                 cout << field[x] << "\n";
                 
                 if (i % 100 == 0) {
-                    this->save("Test_" + to_string(i));
+                    this->save(this->name + "_Tick_№" + to_string(i));
                 }
             }
         }

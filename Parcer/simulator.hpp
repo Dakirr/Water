@@ -101,11 +101,11 @@ template <class PElementType,
           std::size_t Columns = kDynamicExtent>
 void start_simulation(const Context& ctx) {
     if constexpr (Rows == kDynamicExtent && Columns == kDynamicExtent) {
-        auto LS = LiquidSimDynamic<1000000, PElementType, VelocityElementType, VelocityFlowElementType>(ctx.field.size(), ctx.field.front().size(), ctx.field);//field, rho, p, p_old, velocity, velocity_flow, last_use, UT);
+        auto LS = LiquidSimDynamic<10000, PElementType, VelocityElementType, VelocityFlowElementType>(ctx.field.size(), ctx.field.front().size(), ctx.field);//field, rho, p, p_old, velocity, velocity_flow, last_use, UT);
         LS.save("FIXED_DYN");
         LS.simulate();
     } else {
-        auto LS = LiquidSim<Rows, Columns, 1000000, PElementType,VelocityElementType, VelocityFlowElementType>(ctx.field);
+        auto LS = LiquidSim<Rows, Columns, 10000, PElementType,VelocityElementType, VelocityFlowElementType>(ctx.field);
         LS.save("FIXED_ST");
         LS.simulate();
     }

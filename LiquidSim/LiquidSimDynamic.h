@@ -15,6 +15,7 @@
 template <size_t T, typename P, typename V, typename VF>
 class LiquidSimDynamic {
     public:
+    string name = "Simulator_№" + to_string(((unsigned int) (rnd() * 100000)));
     // static constexpr size_t N = 36, M = 84;
     // static constexpr size_t T = 1'000'000;
     size_t N;
@@ -62,11 +63,20 @@ class LiquidSimDynamic {
                       P* rho_in = nullptr): velocity(N_in, M_in), velocity_flow(N_in, M_in) {
         N = N_in;
         M = M_in;
-        p.resize(N, std::vector<P>(M));
-        old_p.resize(N, std::vector<P>(M));
-        last_use.resize(N, std::vector<int>(M));
-        dirs.resize(N, std::vector<int>(M));
-        field.resize(N, std::vector<char>(M + 1));
+        //p.resize(N, std::vector<P>(M));
+        p.resize(N);
+        old_p.resize(N);
+        last_use.resize(N);
+        dirs.resize(N);
+        field.resize(N);
+        for (int i = 0; i < N; i++) {
+            p[i].resize(M);
+            old_p[i].resize(M);
+            last_use[i].resize(M);
+            dirs[i].resize(M);
+            field[i].resize(M + 1);
+        }
+        
 
         if (rho_in == nullptr) {
             P rho_z [256] = {0};
@@ -113,6 +123,7 @@ tuple<V, bool, pair<int, int>> LiquidSimDynamic<T, P, V, VF>::propagate_flow(int
     V ret = 0;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
+        if (nx >= N || ny >= M || nx < 0 || ny < 0) continue;
         if (field[nx][ny] != '#' && last_use[nx][ny] < UT) {
             V cap = velocity.get(x, y, dx, dy);
             V flow = velocity_flow.get(x, y, dx, dy);
@@ -147,6 +158,7 @@ void LiquidSimDynamic<T, P, V, VF>::propagate_stop(int x, int y, bool force) {
         bool stop = true;
         for (auto [dx, dy] : deltas) {
             int nx = x + dx, ny = y + dy;
+            if (nx >= N || ny >= M || nx < 0 || ny < 0) continue;
             if (field[nx][ny] != '#' && last_use[nx][ny] < UT - 1 && velocity.get(x, y, dx, dy) > 0) {
                 stop = false;
                 break;
@@ -159,6 +171,7 @@ void LiquidSimDynamic<T, P, V, VF>::propagate_stop(int x, int y, bool force) {
     last_use[x][y] = UT;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
+        if (nx >= N || ny >= M || nx < 0 || ny < 0) continue;
         if (field[nx][ny] == '#' || last_use[nx][ny] == UT || velocity.get(x, y, dx, dy) > 0) {
             continue;
         }
@@ -173,6 +186,7 @@ V LiquidSimDynamic<T, P, V, VF>::move_prob(int x, int y) {
     for (size_t i = 0; i < deltas.size(); ++i) {
         auto [dx, dy] = deltas[i];
         int nx = x + dx, ny = y + dy;
+        if (nx >= N || ny >= M || nx < 0 || ny < 0) continue;
         if (field[nx][ny] == '#' || last_use[nx][ny] == UT) {
             continue;
         }
@@ -212,6 +226,7 @@ bool LiquidSimDynamic<T, P, V, VF>::propagate_move(int x, int y, bool is_first) 
         for (size_t i = 0; i < deltas.size(); ++i) {
             auto [dx, dy] = deltas[i];
             int nx = x + dx, ny = y + dy;
+            if (nx >= N || ny >= M || nx < 0 || ny < 0) continue;
             if (field[nx][ny] == '#' || last_use[nx][ny] == UT) {
                 tres[i] = sum;
                 continue;
@@ -260,14 +275,15 @@ bool LiquidSimDynamic<T, P, V, VF>::propagate_move(int x, int y, bool is_first) 
 
 template <size_t T, typename P, typename V, typename VF>
 void LiquidSimDynamic<T, P, V, VF>::simulate () {
-    cerr << "Created\n";
-    for (size_t x = 0; x < N; ++x) {
-        for (size_t y = 0; y < M; ++y) {
+    cerr << "Created\n" << N << " " << M << " " << field.size() << " " << field.back().size() << " " << dirs.size() << " " << dirs.back().size() << "\n";
+    for (size_t x = 0; x < N; x++) {
+        for (size_t y = 0; y < M; y++) {
             if (field[x][y] == '#')
                 continue;
-            for (auto [dx, dy] : deltas) {
-                this->dirs[x][y] += (field[x + dx][y + dy] != '#');
-            }
+                for (auto [dx, dy] : deltas) {
+                    if (x + dx >= N || y + dy >= M + 1 || x + dx < 0 || y + dy < 0) continue;
+                    this->dirs[x][y] += (field[x + dx][y + dy] != '#');
+                }
         }
     }
 
@@ -278,6 +294,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
             for (size_t y = 0; y < M; ++y) {
                 if (field[x][y] == '#')
                     continue;
+                if (x + 1 >= N) continue;
                 if (field[x + 1][y] != '#')
                     this->velocity.add(x, y, 1, 0, this->g);
             }
@@ -290,13 +307,14 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
             }
         }
 
+
         for (size_t x = 0; x < N; ++x) {
-            std::for_each(std::execution::par_unseq, std::begin(this->p[x]), std::end(this->p[x]), [&](auto& py){
-                size_t y = &py - &this->p[x][0];
+            for (size_t y = 0; y < M; ++y) {
                 if (field[x][y] == '#')
-                    return;
+                    continue;
                 for (auto [dx, dy] : deltas) {
                     int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= N || ny < 0 || ny >= M + 1) continue;
                     if (field[nx][ny] != '#' && this->old_p[nx][ny] < this->old_p[x][y]) {
                         auto delta_p = this->old_p[x][y] - this->old_p[nx][ny];
                         auto force = delta_p;
@@ -312,7 +330,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
                         total_delta_p -= force / this->dirs[x][y];
                     }
                 }
-            });
+            };
         }
         // Make flow from velocities
         this->velocity_flow = VectorField<VF>(N, M);
@@ -320,6 +338,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
         do {
             this->UT += 2;
             prop = 0;
+            
             for (size_t x = 0; x < N; ++x) {
                 for (size_t y = 0; y < M; ++y) {
                     if (field[x][y] != '#' && this->last_use[x][y] != this->UT) {
@@ -333,11 +352,11 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
         } while (prop);
         // Recalculate p with kinetic energy
         for (size_t x = 0; x < N; ++x) {
-            std::for_each(std::execution::par_unseq, std::begin(this->p[x]), std::end(this->p[x]), [&](auto& py){
-                size_t y = &py - &this->p[x][0];
+            for (size_t y = 0; y < M; ++y) {
                 if (field[x][y] == '#')
-                    return;
+                    continue;;
                 for (auto [dx, dy] : deltas) {
+                    if (x >= N || y + dy >= M || x + dx < 0 || y + dy < 0) continue;
                     auto old_v = this->velocity.get(x, y, dx, dy);
                     auto new_v = this->velocity_flow.get(x, y, dx, dy);
                     if (old_v > 0) {
@@ -355,7 +374,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
                         }
                     }
                 }
-            });
+            };
         }
         this->UT += 2;
         prop = false;
@@ -380,7 +399,7 @@ void LiquidSimDynamic<T, P, V, VF>::simulate () {
                 cout << "\n";
             }
             if (i % 100 == 0) {
-                this->save("Test_" + to_string(i));
+                this->save(this->name + "_Tick_№" + to_string(i));
             }
         }
         //exit(0);
@@ -409,13 +428,16 @@ void LiquidSimDynamic<T, P, V, VF>::save(std::string name) {
     file << g << "\n";
 
     file << "\n";
+    // cerr << "save" << "\n";
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
+            //cerr << i << " " << j << "\t";
             file << p[i][j] << " ";
         }
+        //cerr << "\n";
         file << "\n";
     }
-
+    
     file << "\n";
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
@@ -470,6 +492,7 @@ void LiquidSimDynamic<T, P, V, VF>::save(std::string name) {
     }
     file << "\n";
     
+    cerr << N << " " << M << " " << field.size() << " " << field.back().size() << "\n"; 
     for (size_t x = 0; x < N; ++x) {
         for (size_t y = 0; y < M; ++y) {
             file << (int) field[x][y] << " ";
@@ -553,8 +576,8 @@ LiquidSimDynamic<T, P, V, VF> load(std::string name) {
     }
     
     int n;
-    for (size_t x = 0; x < N1; ++x) {
-        for (size_t y = 0; y < M1; ++y) {
+    for (size_t x = 0; x < N1; x++) {
+        for (size_t y = 0; y < M1; y++) {
             file >> n;
             ret.field[x][y] = (char) n;
         }
