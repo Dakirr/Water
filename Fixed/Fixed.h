@@ -6,12 +6,16 @@
 #include <iostream>
 #include <utility>
 #include <random>
+#include <fstream>
+extern int optimise;
 
 
 #include "FastFixed.h"
 
 using namespace std;
 extern mt19937 rnd;
+// extern std::ifstream file_random;
+// extern size_t cur_r;
 
 #if (defined(__clang__) || defined(__GNUC__)) && defined(__SIZEOF_INT128__)
 
@@ -37,6 +41,7 @@ class Fixed {
     static constexpr std::size_t kNValue = N;
     static constexpr std::size_t kKValue = K;
     static constexpr bool kFast = false;
+    static constexpr int128_t mask =  ((((int128_t) 1) << K) - 1); 
     using IntType = 
     std::conditional_t<
         (N <= 8), int8_t,
@@ -169,7 +174,13 @@ static constexpr T from_raw(IntType x) {
 
 template <int N, int K>
 Fixed<N, K> Fixed<N, K>::random01() {
-    return from_raw<N, K, false, typename Fixed<N, K>::IntType, Fixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    //return from_raw<N, K, false, typename Fixed<N, K>::IntType, Fixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    if (!optimise) {
+        return from_raw<N, K, false, typename Fixed<N, K>::IntType, Fixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    } else {
+        while (RandQueue.empty());
+        return from_raw<N, K, false, typename Fixed<N, K>::IntType, Fixed<N, K>>((RandQueue.pop() & mask));
+    }
 };
 
 template <typename Fixed_or_Float> 

@@ -12,6 +12,7 @@
 // constexpr size_t N = 14, M = 5;
 #include "LiquidSim.h"
 
+
 template <size_t T, typename P, typename V, typename VF>
 class LiquidSimDynamic {
     public:

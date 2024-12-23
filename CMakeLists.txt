@@ -4,7 +4,7 @@ project(FluidSim)
 #set(CMAKE_CXX_EXTENSIONS FALSE)
 ##########################################################################
 #set(FIXED_LIB ./Fixed/Fixed.h ./Fixed/Fixed.cpp )
-set(MAIN_SRC ./Fixed/Fixed.h ./Fixed/FastFixed.h ./Fixed/Fixed.cpp ./LiquidSim/LiquidSimDynamic.h  ./LiquidSim/ThreadPool.h ./LiquidSim/LiquidSimDynamic.h  ./LiquidSim/LiquidSim.cpp ./fluid.cpp)
+set(MAIN_SRC ./Fixed/Fixed.h ./Fixed/FastFixed.h ./Fixed/Fixed.cpp ./LiquidSim/LiquidSimDynamic.h  ./LiquidSim/Thread.h ./LiquidSim/Thread.cpp ./LiquidSim/LiquidSimDynamic.h  ./LiquidSim/LiquidSim.cpp ./fluid.cpp)
 ###########################################################################
 #add_library(FixedLib STATIC ${FIXED_LIB})
 ##########################################################################

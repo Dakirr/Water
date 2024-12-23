@@ -6,11 +6,15 @@
 #include <iostream>
 #include <utility>
 #include <random>
-
+#include "../LiquidSim/Thread.h"
+extern int optimise;
 
 
 using namespace std;
 extern mt19937 rnd;
+extern std::ifstream file_random;
+extern size_t cur_r;
+
 
 #if (defined(__clang__) || defined(__GNUC__)) && defined(__SIZEOF_INT128__)
 
@@ -40,7 +44,7 @@ class FastFixed {
     static constexpr std::size_t kNValue = N;
     static constexpr std::size_t kKValue = K;
     static constexpr bool kFast = true;
-
+    static constexpr int128_t mask =  ((((int128_t) 1) << K) - 1); 
     using IntType = 
     std::conditional_t<
         (N <= 8), int_fast8_t,
@@ -157,7 +161,13 @@ class FastFixed {
 
 template <int N, int K>
 FastFixed<N, K> FastFixed<N, K>::random01() {
-    return from_raw<N, K, true, typename FastFixed<N, K>::IntType, FastFixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    //return from_raw<N, K, true, typename FastFixed<N, K>::IntType, FastFixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    if (!optimise) {
+        return from_raw<N, K, false, typename FastFixed<N, K>::IntType, FastFixed<N, K>>((rnd() & ((((int128_t) 1) << K) - 1)));
+    } else {
+        while (RandQueue.empty());
+        return from_raw<N, K, false, typename FastFixed<N, K>::IntType, FastFixed<N, K>>((RandQueue.pop() & mask));
+    }
 };
 
 template <int N, int K>

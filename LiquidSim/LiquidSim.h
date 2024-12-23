@@ -2,7 +2,6 @@
 #ifndef LIQUIDSIM_H
 #define LIQUIDSIM_H
 #include "../Fixed/Fixed.h"
-#include "ThreadPool.h"
 #include <random>
 #include <algorithm>
 #include <ranges>
@@ -13,15 +12,12 @@
 #include <execution>
 // constexpr size_t N = 14, M = 5;
 
-size_t max_threads = std::thread::hardware_concurrency();
+// size_t max_threads = std::thread::hardware_concurrency();
 
 template <size_t N, size_t M, size_t T, typename P, typename V, typename VF>
 class LiquidSim {
     public:
     string name = "Simulator_№" + to_string(((unsigned int) (rnd() * 100000)));
-    ThreadPool<int> TP {max_threads};
-    ThreadPool<tuple<V, bool, pair<int, int>>> TPVF {max_threads};
-    ThreadPool<bool> TPB {max_threads};
     // static constexpr size_t N = 36, M = 84;
     // static constexpr size_t T = 1'000'000;
     template <typename A>
@@ -192,7 +188,6 @@ void LiquidSim<N, M, T, P, V, VF>::propagate_stop(int x, int y, bool force) {
         }
     }
     last_use[x][y] = UT;
-    std::vector<std::future<int>> futures;
     for (auto [dx, dy] : deltas) {
         int nx = x + dx, ny = y + dy;
         if (field[nx][ny] == '#' || last_use[nx][ny] == UT || velocity.get(x, y, dx, dy) > 0) {

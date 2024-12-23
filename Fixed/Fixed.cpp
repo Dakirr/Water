@@ -1,7 +1,30 @@
 #include "Fixed.h"
+#include <fstream>
+int optimise = 0;
+
+// size_t cur_r = 0;
+// bool x = false;
+// std::ifstream file_random("Random.txt");
 
 
-mt19937 rnd(1337);
+// void rnd_init() {
+//     if (!x) {
+//         if (!(file_random.is_open())) {
+//             throw std::runtime_error("Could not open file");
+//         }
+//     }
+//     x = true;
+// }
+
+// std::ofstream file("Random.txt");
+    // if (!file.is_open()) {
+    //     throw std::runtime_error("Could not open file");
+    // }
+    // for (size_t i = 0; i <= 100000000; i++) {
+    //     file << double(rnd())/rnd.max() << " ";
+    // }
+    // file.close();
+    // exit(0);
 
 // constexpr Fixed from_raw(int32_t x) {
 //     Fixed ret;
